@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:clipboard/clipboard.dart';
 import 'dart:async';
@@ -122,37 +124,50 @@ class ClipboardReader extends ChangeNotifier {
     };
   }
 
-  int lookaheadAndTranslate(int i, int numLookAhead, String text, db) {
-    if (i + numLookAhead > text.length) {
-      return 0;
-    }
-    final lookahead = _clipboardText.substring(i, i + numLookAhead);
+  Map<String, String> lookupExactMatch(db, String search) {
     final stmt = db.prepare(
-        'SELECT * FROM cedict_lookup WHERE lookup LIKE "$lookahead%" ORDER BY LENGTH(lookup) DESC');
+        'SELECT Simplified, Traditional, Pinyin, English FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = "$search"');
     final lookupResult = stmt.select();
     if (lookupResult.isNotEmpty) {
-      // sort by length
-      print(lookupResult);
-      // if (lookupResult.length > 1) {
-      //   print(lookupResult[0]['Lookup'].length);
-      //   print(lookupResult[1]['Lookup'].length);
-      //   lookupResult
-      //       .sort((a, b) => b['Lookup'].length.compareTo(a['Lookup'].length));
-      // }
-      for (final row in lookupResult) {
-        print(row);
-        String lookup = row['Lookup'];
-        int lookupResultLength = lookup.length;
-        if (i + lookupResultLength > text.length) {
-          continue;
-        }
-        if (_clipboardText.substring(i, i + lookupResultLength) == lookup) {
-          final cedict_id = row['cedict_id'];
-          final definition = lookupToDefinition(db, cedict_id);
+      final row = lookupResult.first;
+      final simplified = row['Simplified'];
+      final traditional = row['Traditional'];
+      final pinyin = row['Pinyin'];
+      final english = row['English'];
+      return {
+        'simplified': simplified,
+        'traditional': traditional,
+        'pinyin': pinyin,
+        'english': english,
+      };
+    } else {
+      return {};
+    }
+  }
+
+  int lookaheadAndTranslate(
+      int i, int minLookAhead, int maxLookahead, String text, db) {
+    if (i + minLookAhead > text.length) {
+      return 0;
+    }
+    maxLookahead = min(maxLookahead, text.length - i);
+    final lookahead = _clipboardText.substring(i, i + minLookAhead);
+    final stmt = db.prepare(
+        'SELECT LENGTH(lookup) AS length_of_longest_match FROM cedict_lookup WHERE lookup LIKE "$lookahead%" AND LENGTH(lookup) <= $maxLookahead AND LENGTH(lookup) >= $minLookAhead ORDER BY length_of_longest_match DESC LIMIT 1');
+    final longestMatchResult = stmt.select();
+    if (longestMatchResult.isNotEmpty) {
+      final longestMatch = longestMatchResult.first['length_of_longest_match'];
+      maxLookahead = min(longestMatch, maxLookahead);
+      for (int j = maxLookahead; j >= minLookAhead; j--) {
+        final lookup = _clipboardText.substring(i, i + j);
+        final definition = lookupExactMatch(db, lookup);
+        if (definition.isNotEmpty) {
           _translatedText.add(definition);
-          return lookupResultLength;
+          return j;
         }
       }
+    } else {
+      return 0;
     }
     return 0;
   }
@@ -164,15 +179,14 @@ class ClipboardReader extends ChangeNotifier {
     int i = 0;
     _translatedText = [];
     while (i < _clipboardText.length) {
-      print(i);
-      print(_clipboardText.length);
       if (!isChinese(_clipboardText[i])) {
         i++;
         continue;
       }
-      int lookAheadLength = lookaheadAndTranslate(i, 4, _clipboardText, db);
+      int lookAheadLength = lookaheadAndTranslate(
+          i, 4, _clipboardText.length, _clipboardText, db);
       if (lookAheadLength == 0) {
-        lookAheadLength = lookaheadAndTranslate(i, 2, _clipboardText, db);
+        lookAheadLength = lookaheadAndTranslate(i, 2, 4, _clipboardText, db);
       }
       if (lookAheadLength == 0) {
         final stmt = db.prepare(
