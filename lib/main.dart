@@ -82,9 +82,9 @@ class MyHomePage extends StatefulWidget {
 
 class ClipboardReader extends ChangeNotifier {
   String _clipboardText = '';
-  List<dynamic> _translatedText = [];
-
   String get clipboardText => _clipboardText;
+  List<Map<String, String>> _translatedText = [];
+  List<Map<String, String>> get translatedText => _translatedText;
 
   static const Map<String, List<int>> ranges = {
     'CJK Unified Ideographs': [0x4E00, 0x9FFF],
@@ -106,22 +106,6 @@ class ClipboardReader extends ChangeNotifier {
       }
     }
     return false;
-  }
-
-  Map<String, String> lookupToDefinition(db, cedict_id) {
-    final stmt = db.prepare('SELECT * FROM cedict WHERE id = "$cedict_id"');
-    final cedictResult = stmt.select();
-    final row = cedictResult.first;
-    final simplified = row['Simplified'];
-    final traditional = row['Traditional'];
-    final pinyin = row['Pinyin'];
-    final english = row['English'];
-    return {
-      'simplified': simplified,
-      'traditional': traditional,
-      'pinyin': pinyin,
-      'english': english,
-    };
   }
 
   Map<String, String> lookupExactMatch(db, String search) {
@@ -151,7 +135,7 @@ class ClipboardReader extends ChangeNotifier {
       return 0;
     }
     maxLookahead = min(maxLookahead, text.length - i);
-    final lookahead = _clipboardText.substring(i, i + minLookAhead);
+    final lookahead = text.substring(i, i + minLookAhead);
     final stmt = db.prepare(
         'SELECT LENGTH(lookup) AS length_of_longest_match FROM cedict_lookup WHERE lookup LIKE "$lookahead%" AND LENGTH(lookup) <= $maxLookahead AND LENGTH(lookup) >= $minLookAhead ORDER BY length_of_longest_match DESC LIMIT 1');
     final longestMatchResult = stmt.select();
@@ -172,29 +156,25 @@ class ClipboardReader extends ChangeNotifier {
     return 0;
   }
 
-  void translateClipboard() {
+  void translateClipboard(String text) {
     Directory current = Directory.current;
     String workingDir = current.path;
     final Database db = sqlite3.open('$workingDir/cedict.db');
     int i = 0;
     _translatedText = [];
-    while (i < _clipboardText.length) {
-      if (!isChinese(_clipboardText[i])) {
+    text = text.trim();
+    while (i < text.length) {
+      if (!isChinese(text[i])) {
         i++;
         continue;
       }
-      int lookAheadLength = lookaheadAndTranslate(
-          i, 4, _clipboardText.length, _clipboardText, db);
+      int lookAheadLength = lookaheadAndTranslate(i, 4, text.length, text, db);
       if (lookAheadLength == 0) {
-        lookAheadLength = lookaheadAndTranslate(i, 2, 4, _clipboardText, db);
+        lookAheadLength = lookaheadAndTranslate(i, 2, 4, text, db);
       }
       if (lookAheadLength == 0) {
-        final stmt = db.prepare(
-            'SELECT * FROM cedict_lookup WHERE lookup = "${_clipboardText[i]}"');
-        final lookupResult = stmt.select();
-        if (lookupResult.isNotEmpty) {
-          final cedict_id = lookupResult.first['cedict_id'];
-          final definition = lookupToDefinition(db, cedict_id);
+        final definition = lookupExactMatch(db, text[i]);
+        if (definition.isNotEmpty) {
           _translatedText.add(definition);
         }
         lookAheadLength = 1;
@@ -209,7 +189,7 @@ class ClipboardReader extends ChangeNotifier {
     if (data == _clipboardText) return;
     _clipboardText = data;
     print(_clipboardText);
-    translateClipboard();
+    translateClipboard(_clipboardText);
     print(_translatedText);
     notifyListeners();
   }
@@ -224,19 +204,6 @@ class ClipboardReader extends ChangeNotifier {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
   var clipboardReader = ClipboardReader();
   // run timer
   @override
@@ -246,6 +213,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   String _clipboardText = 'fa';
+  List<Map<String, String>> _translatedText = [];
 
   // build this widget when clipboardReader.clipboardText changes
   @override
@@ -254,6 +222,7 @@ class _MyHomePageState extends State<MyHomePage> {
     clipboardReader.addListener(() {
       setState(() {
         _clipboardText = clipboardReader.clipboardText;
+        _translatedText = clipboardReader.translatedText;
       });
     });
   }
@@ -291,30 +260,29 @@ class _MyHomePageState extends State<MyHomePage> {
           // center the children vertically; the main axis here is the vertical
           // axis because Columns are vertical (the cross axis would be
           // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
             Text(
               _clipboardText,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            ElevatedButton(
-              onPressed: () {
-                clipboardReader.readClipboard();
-              },
-              child: const Text('Read Clipboard'),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _translatedText.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    _translatedText[index]['simplified']!,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  );
+                },
+              ),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: () {},
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
