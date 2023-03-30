@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:clipboard/clipboard.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite3;
 // import 'package:sqflite_common/sqlite_api.dart';
 // import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -83,8 +83,8 @@ class MyHomePage extends StatefulWidget {
 class ClipboardReader extends ChangeNotifier {
   String _clipboardText = '';
   String get clipboardText => _clipboardText;
-  List<Map<String, String>> _translatedText = [];
-  List<Map<String, String>> get translatedText => _translatedText;
+  List<Map<String, dynamic>> _translatedText = [];
+  List<Map<String, dynamic>> get translatedText => _translatedText;
 
   static const Map<String, List<int>> ranges = {
     'CJK Unified Ideographs': [0x4E00, 0x9FFF],
@@ -108,7 +108,7 @@ class ClipboardReader extends ChangeNotifier {
     return false;
   }
 
-  Map<String, String> lookupExactMatch(db, String search) {
+  Map<String, dynamic> lookupExactMatch(db, String search) {
     final stmt = db.prepare(
         'SELECT Simplified, Traditional, Pinyin, English FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = "$search"');
     final lookupResult = stmt.select();
@@ -118,11 +118,13 @@ class ClipboardReader extends ChangeNotifier {
       final traditional = row['Traditional'];
       final pinyin = row['Pinyin'];
       final english = row['English'];
+      bool showBoth = simplified != traditional;
       return {
         'simplified': simplified,
         'traditional': traditional,
         'pinyin': pinyin,
         'english': english,
+        'showBoth': showBoth
       };
     } else {
       return {};
@@ -159,7 +161,7 @@ class ClipboardReader extends ChangeNotifier {
   void translateClipboard(String text) {
     Directory current = Directory.current;
     String workingDir = current.path;
-    final Database db = sqlite3.open('$workingDir/cedict.db');
+    final sqlite3.Database db = sqlite3.sqlite3.open('$workingDir/cedict.db');
     int i = 0;
     _translatedText = [];
     text = text.trim();
@@ -213,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   String _clipboardText = 'fa';
-  List<Map<String, String>> _translatedText = [];
+  List<Map<String, dynamic>> _translatedText = [];
 
   // build this widget when clipboardReader.clipboardText changes
   @override
@@ -268,14 +270,31 @@ class _MyHomePageState extends State<MyHomePage> {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: _translatedText.length,
-                itemBuilder: (context, index) {
-                  return Text(
-                    _translatedText[index]['simplified']!,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  );
-                },
+              child: GridView.count(
+                crossAxisCount: 3,
+                children: List.generate(_translatedText.length, (index) {
+                  return Card(
+                      child: Column(
+                    children: [
+                      ListTile(
+                        title: Text(
+                          _translatedText[index]['showBoth']!
+                              ? '${_translatedText[index]['simplified']!} | ${_translatedText[index]['traditional']!}'
+                              : _translatedText[index]['simplified']!,
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
+                        subtitle: Text(
+                          _translatedText[index]['pinyin']!,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      Text(
+                        _translatedText[index]['english']!,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ));
+                }),
               ),
             ),
           ],
