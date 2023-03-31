@@ -4,7 +4,7 @@ import 'package:clipboard/clipboard.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
-// import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
+import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 // TODO: Scroll
@@ -181,7 +181,7 @@ class ClipboardReader extends ChangeNotifier {
 
   Map<String, dynamic> lookupExactMatch(db, String search) {
     final stmt = db.prepare(
-        'SELECT Simplified, Traditional, Pinyin, English FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = "$search"');
+        "SELECT Simplified, Traditional, Pinyin, English FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = '$search'");
     final lookupResult = stmt.select();
     if (lookupResult.isNotEmpty) {
       final row = lookupResult.first;
@@ -210,7 +210,7 @@ class ClipboardReader extends ChangeNotifier {
     maxLookahead = min(maxLookahead, text.length - i);
     final lookahead = text.substring(i, i + minLookAhead);
     final stmt = db.prepare(
-        'SELECT LENGTH(lookup) AS length_of_longest_match FROM cedict_lookup WHERE lookup LIKE "$lookahead%" AND LENGTH(lookup) <= $maxLookahead AND LENGTH(lookup) >= $minLookAhead ORDER BY length_of_longest_match DESC LIMIT 1');
+        "SELECT LENGTH(lookup) AS length_of_longest_match FROM cedict_lookup WHERE lookup LIKE '$lookahead%' AND LENGTH(lookup) <= $maxLookahead AND LENGTH(lookup) >= $minLookAhead ORDER BY length_of_longest_match DESC LIMIT 1");
     final longestMatchResult = stmt.select();
     if (longestMatchResult.isNotEmpty) {
       final longestMatch = longestMatchResult.first['length_of_longest_match'];

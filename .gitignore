@@ -47,3 +47,5 @@ app.*.map.json
 # Custom
 *.db
 cedict*.txt
+**/generated_*
+**/Generated*
