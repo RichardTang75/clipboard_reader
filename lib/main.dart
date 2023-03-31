@@ -4,14 +4,11 @@ import 'package:clipboard/clipboard.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-// TODO: Scroll
+// TODO: Persistent scrollbar
 // TODO: Multiple definitions, using tabs
-// TODO: Standard height card
 // TODO: Settings page
-// TODO: Remove duplicates
 // TODO: Ignore definitions, cache definitions
 
 // Python
@@ -19,33 +16,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // sqfliteFfiInit();
   runApp(const MyApp());
 }
-
-// class DatabaseProvider {
-//   DatabaseProvider._();
-//   static final DatabaseProvider db = DatabaseProvider._();
-//   static Database? _database;
-//   Future<Database> get database async {
-//     print('hi');
-//     if (_database != null) return _database!;
-//     _database = await initDB();
-//     return _database!;
-//   }
-
-//   initDB() async {
-//     print('hello');
-//     var db = await databaseFactoryFfiNoIsolate.openDatabase(
-//         "C:/Users/asdfuiop/Documents/vscode/4. flutter/clipboard_reader/cedict.db",
-//         options: OpenDatabaseOptions(readOnly: true));
-//     print('yes');
-//     var result =
-//         await db.transaction((txn) async => txn.rawQuery('SELECT * FROM cedict'));
-//     print(result);
-//     return db;
-//   }
-// }
 
 class TextProperties {
   static const double padding = 16;
@@ -229,6 +201,19 @@ class ClipboardReader extends ChangeNotifier {
     return 0;
   }
 
+  void removeDuplicates() {
+    final seen = <String>{};
+    _translatedText.removeWhere((element) {
+      final key = element['simplified'];
+      if (seen.contains(key)) {
+        return true;
+      } else {
+        seen.add(key);
+        return false;
+      }
+    });
+  }
+
   void translateClipboard(String text) {
     Directory current = Directory.current;
     String workingDir = current.path;
@@ -254,6 +239,7 @@ class ClipboardReader extends ChangeNotifier {
       }
       i += lookAheadLength;
     }
+    removeDuplicates();
   }
 
   void readClipboard() async {
