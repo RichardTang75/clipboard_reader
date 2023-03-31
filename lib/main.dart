@@ -1,12 +1,21 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:clipboard/clipboard.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
-// import 'package:sqflite_common/sqlite_api.dart';
-// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+// import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+
+// TODO: Scroll
+// TODO: Multiple definitions, using tabs
+// TODO: Standard height card
+// TODO: Settings page
+// TODO: Remove duplicates
+// TODO: Ignore definitions, cache definitions
+
+// Python
+// TODO: Fancy pinyin
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +47,65 @@ void main() async {
 //   }
 // }
 
+class TextProperties {
+  static const double padding = 16;
+  static const double fontSizeFactor = 1.1;
+}
+
+class StandardCard extends Card {
+  // optional title, subtitle, body
+  StandardCard(
+      {super.key,
+      required BuildContext context,
+      String? title,
+      TextStyle? titleStyle,
+      String? subtitle,
+      TextStyle? subtitleStyle,
+      String? body,
+      TextStyle? bodyStyle,
+      AlignmentGeometry? bodyAlignment,
+      double? bodySize})
+      : super(
+          child: Column(
+            children: [
+              if (title != null)
+                ListTile(
+                  title: Text(
+                    title,
+                    style:
+                        titleStyle ?? Theme.of(context).textTheme.headlineLarge,
+                  ),
+                  subtitle: subtitle != null
+                      ? Text(
+                          subtitle,
+                          style: subtitleStyle ??
+                              Theme.of(context).textTheme.titleLarge,
+                        )
+                      : null,
+                ),
+              if (body != null)
+                LimitedBox(
+                  maxHeight: bodySize ?? double.infinity,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(TextProperties.padding,
+                          0, TextProperties.padding, TextProperties.padding),
+                      child: Align(
+                        alignment: bodyAlignment ?? Alignment.center,
+                        child: Text(
+                          body,
+                          style: bodyStyle ??
+                              Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   // This widget is the root of your application.
@@ -56,8 +124,11 @@ class MyApp extends StatelessWidget {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
         primarySwatch: Colors.green,
+        textTheme: Theme.of(context).textTheme.apply(
+              fontSizeFactor: TextProperties.fontSizeFactor,
+            ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Chinese Clipboard Reader'),
     );
   }
 }
@@ -186,14 +257,16 @@ class ClipboardReader extends ChangeNotifier {
   }
 
   void readClipboard() async {
-    final data = await FlutterClipboard.paste();
-    // check if data is different from clipboardText
-    if (data == _clipboardText) return;
-    _clipboardText = data;
-    print(_clipboardText);
-    translateClipboard(_clipboardText);
-    print(_translatedText);
-    notifyListeners();
+    // wrap in try catch to prevent app from crashing
+    try {
+      final data = await FlutterClipboard.paste();
+      if (data == _clipboardText) return;
+      _clipboardText = data;
+      translateClipboard(_clipboardText);
+      notifyListeners();
+    } catch (e) {
+      print(e);
+    }
   }
 
   // run timer
@@ -216,6 +289,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String _clipboardText = 'fa';
   List<Map<String, dynamic>> _translatedText = [];
+  final _scrollController = ScrollController();
 
   // build this widget when clipboardReader.clipboardText changes
   @override
@@ -237,7 +311,8 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    // start timer
+    final style = Theme.of(context).textTheme.headlineLarge;
+    final line_height = style!.fontSize! * TextProperties.fontSizeFactor;
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
@@ -247,57 +322,67 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
-          children: <Widget>[
-            Text(
-              _clipboardText,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 3,
-                children: List.generate(_translatedText.length, (index) {
-                  return Card(
-                      child: Column(
-                    children: [
-                      ListTile(
-                        title: Text(
-                          _translatedText[index]['showBoth']!
-                              ? '${_translatedText[index]['simplified']!} | ${_translatedText[index]['traditional']!}'
-                              : _translatedText[index]['simplified']!,
-                          style: Theme.of(context).textTheme.headlineLarge,
-                        ),
-                        subtitle: Text(
-                          _translatedText[index]['pinyin']!,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      Text(
-                        _translatedText[index]['english']!,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ],
-                  ));
-                }),
+        child: SelectableRegion(
+          selectionControls: materialTextSelectionControls,
+          focusNode: FocusNode(),
+          child: Column(
+            // Column is also a layout widget. It takes a list of children and
+            // arranges them vertically. By default, it sizes itself to fit its
+            // children horizontally, and tries to be as tall as its parent.
+            //
+            // Invoke "debug painting" (press "p" in the console, choose the
+            // "Toggle Debug Paint" action from the Flutter Inspector in Android
+            // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+            // to see the wireframe for each widget.
+            //
+            // Column has various properties to control how it sizes itself and
+            // how it positions its children. Here we use mainAxisAlignment to
+            // center the children vertically; the main axis here is the vertical
+            // axis because Columns are vertical (the cross axis would be
+            // horizontal).
+            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.max,
+            children: <Widget>[
+              // Padding(
+              //   padding: const EdgeInsets.all(textProperties.padding),
+              //   child: Text(
+              //     _clipboardText,
+              //     style: Theme.of(context).textTheme.headlineMedium,
+              //   ),
+              // ),
+              StandardCard(
+                context: context,
+                title: 'Clipboard',
+                titleStyle: Theme.of(context).textTheme.titleLarge,
+                body: _clipboardText,
+                bodyStyle: Theme.of(context).textTheme.headlineMedium,
+                bodyAlignment: Alignment.centerLeft,
+                bodySize: line_height * 3,
               ),
-            ),
-          ],
+              Expanded(
+                child: AlignedGridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  itemCount: _translatedText.length,
+                  itemBuilder: (context, index) {
+                    return StandardCard(
+                      context: context,
+                      title: _translatedText[index]['showBoth']!
+                          ? '${_translatedText[index]['simplified']!} | ${_translatedText[index]['traditional']!}'
+                          : _translatedText[index]['simplified']!,
+                      titleStyle: Theme.of(context).textTheme.headlineLarge,
+                      subtitle: _translatedText[index]['pinyin']!,
+                      subtitleStyle: Theme.of(context).textTheme.titleLarge,
+                      body: _translatedText[index]['english']!,
+                      bodyStyle: Theme.of(context).textTheme.titleLarge,
+                      bodySize: line_height * 2,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
