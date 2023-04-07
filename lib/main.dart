@@ -7,12 +7,13 @@ import 'package:sqlite3/sqlite3.dart' as sqlite3;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 // TODO: Persistent scrollbar
-// TODO: Multiple definitions, using tabs
+// TODO: Multiple definitions - using tabs
 // TODO: Settings page
 // TODO: Ignore definitions, cache definitions
 
 // Python
 // TODO: Fancy pinyin
+// TODO: Variant character, multiple definitions
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
