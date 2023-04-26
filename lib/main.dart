@@ -123,7 +123,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   var clipboardReader = ClipboardReader();
-  // run timer
   @override
   void initState() {
     super.initState();
@@ -150,10 +149,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     final style = Theme.of(context).textTheme.headlineLarge;
     final line_height = style!.fontSize! * TextProperties.fontSizeFactor;
     return Scaffold(
@@ -163,8 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: SelectableRegion(
           selectionControls: materialTextSelectionControls,
           focusNode: FocusNode(),
@@ -186,13 +179,6 @@ class _MyHomePageState extends State<MyHomePage> {
             mainAxisAlignment: MainAxisAlignment.start,
             mainAxisSize: MainAxisSize.max,
             children: <Widget>[
-              // Padding(
-              //   padding: const EdgeInsets.all(textProperties.padding),
-              //   child: Text(
-              //     _clipboardText,
-              //     style: Theme.of(context).textTheme.headlineMedium,
-              //   ),
-              // ),
               StandardCard(
                 context: context,
                 title: 'Clipboard',
@@ -232,7 +218,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: () {},
         tooltip: 'Increment',
         child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
