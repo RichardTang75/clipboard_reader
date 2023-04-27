@@ -7,10 +7,10 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 // TODO: Multiple definitions - using tabs
 // TODO: Settings page
 // TODO: Ignore definitions, cache definitions
+// TODO: Fancy pinyin
 
 // Python
-// TODO: Fancy pinyin
-// TODO: Variant character, multiple definitions
+// TODO: Variant character
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
