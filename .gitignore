@@ -49,3 +49,4 @@ app.*.map.json
 cedict*.txt
 **/generated_*
 **/Generated*
+*.csv
