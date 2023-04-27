@@ -1,25 +1,18 @@
 import 'package:clipboard_reader/clipboardtranslate.dart';
+import 'package:clipboard_reader/textproperties.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-// TODO: Persistent scrollbar
 // TODO: Multiple definitions - using tabs
+// TODO: Persistent scrollbar
 // TODO: Settings page
 // TODO: Ignore definitions, cache definitions
 // TODO: Fancy pinyin
 
-// Python
-// TODO: Variant character
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
-}
-
-class TextProperties {
-  static const double padding = 16;
-  static const double fontSizeFactor = 1.1;
 }
 
 class StandardCard extends Card {
