@@ -133,8 +133,8 @@ class ClipboardReader extends ChangeNotifier {
     // wrap in try catch to prevent app from crashing
     try {
       final data = await FlutterClipboard.paste();
-      if (data == _clipboardText) return;
       final text = cleanText(data);
+      if (text == _clipboardText) return;
       _clipboardText = text;
       translateClipboard(_clipboardText);
       notifyListeners();

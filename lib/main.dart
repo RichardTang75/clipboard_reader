@@ -9,6 +9,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 // TODO: Settings page
 // TODO: Ignore definitions, cache definitions
 // TODO: Fancy pinyin
+// TODO: Order by number of definitions
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
