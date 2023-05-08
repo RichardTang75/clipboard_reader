@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:async';
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
+import 'package:tuple/tuple.dart';
 import 'package:clipboard/clipboard.dart';
 import 'package:flutter/material.dart';
 
@@ -33,15 +34,60 @@ class ClipboardReader extends ChangeNotifier {
     return false;
   }
 
+  Tuple2<String, int> getVowel(String pinyin) {
+    for (int i = 0; i < pinyin.length; i++) {
+      final c = pinyin[i];
+      if (c == 'a' ||
+          c == 'e' ||
+          c == 'i' ||
+          c == 'o' ||
+          c == 'u' ||
+          c == 'ü') {
+        return Tuple2(c, i);
+      }
+    }
+    return const Tuple2('', -1);
+  }
+
+  String addPinyinTones(String pinyin) {
+    final toneMap = {
+      'a': ['ā', 'á', 'ǎ', 'à'],
+      'e': ['ē', 'é', 'ě', 'è'],
+      'i': ['ī', 'í', 'ǐ', 'ì'],
+      'o': ['ō', 'ó', 'ǒ', 'ò'],
+      'u': ['ū', 'ú', 'ǔ', 'ù'],
+      'ü': ['ǖ', 'ǘ', 'ǚ', 'ǜ'],
+    };
+    final pinyinWords = pinyin.split(' ');
+    for (int i = 0; i < pinyinWords.length; i++) {
+      final pinyinWord = pinyinWords[i];
+      final vowelAndIndex = getVowel(pinyinWord);
+      final vowel = vowelAndIndex.item1;
+      final vowelIndex = vowelAndIndex.item2;
+      final tone = pinyinWord[pinyinWord.length - 1];
+      final toneIndex = int.parse(tone) - 1;
+      if (vowelIndex != -1 && toneIndex >= 0 && toneIndex <= 3) {
+        final newVowel = toneMap[vowel]![toneIndex];
+        pinyinWords[i] =
+            pinyinWord.replaceRange(vowelIndex, vowelIndex + 1, newVowel);
+        pinyinWords[i] = pinyinWords[i].substring(0, pinyinWords[i].length - 1);
+      } else if (toneIndex == 4 || toneIndex == -1) {
+        pinyinWords[i] = pinyinWord.substring(0, pinyinWord.length - 1);
+      }
+    }
+    return pinyinWords.join(' ');
+  }
+
   Map<String, dynamic> lookupExactMatch(db, String search) {
     final stmt = db.prepare(
-        "SELECT Simplified, Traditional, Pinyin, English FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = '$search'");
+        "SELECT * FROM cedict_lookup INNER JOIN cedict ON cedict_lookup.cedict_id = cedict.id WHERE lookup = '$search' ORDER BY Definitions DESC,cedict_lookup.id ASC");
     final lookupResult = stmt.select();
     if (lookupResult.isNotEmpty) {
       final row = lookupResult.first;
       final simplified = row['Simplified'];
       final traditional = row['Traditional'];
-      final pinyin = row['Pinyin'];
+      final initialPinyin = row['Pinyin'];
+      final pinyin = addPinyinTones(initialPinyin);
       final english = row['English'];
       bool showBoth = simplified != traditional;
       return {
